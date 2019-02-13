@@ -1,0 +1,17 @@
+solr:
+  address: http://localhost:3129/
+  dataPath: ./testdata/solr/collection/data
+  serverUrl: http://localhost:8983/solr/
+  homePath: ./testdata/solr/collection/data
+dropbox:
+  accessToken: 6PIU0x4eVr8AAAAAAAABD2DQxxtrY8A10xTty2f3WuziKUm9nXlluxHYsZmOd2Y7
+  ewdTestFolder: /jbettiol-ewd-test
+
+#logging.level.=DEBUG
+#org.slf4j.simpleLogger.defaultLogLevel=DEBUG
+#dropbox.baseurl=https://api.dropboxapi.com/2
+#dropbox.contenturl=https://content.dropboxapi.com/2
+#dropbox.authtoken=6PIU0x4eVr8AAAAAAAABD2DQxxtrY8A10xTty2f3WuziKUm9nXlluxHYsZmOd2Y7
+#dropbox.test.folder=/jbettiol-ewd-test
+
+

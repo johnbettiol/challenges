@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schema name="default-config" version="1.6">
+	<uniqueKey>id</uniqueKey>
+	<field name="filename" type="text_general" indexed="true"
+		stored="true" />
+	<field name="filepath" type="text_general" indexed="true"
+		stored="true" />
+	<field name="filesize" type="plongs" indexed="true"
+		stored="true" />
+	<field name="tags" type="text_general" indexed="true"
+		stored="true" multiValued="true" />
+</schema>
