@@ -11,10 +11,12 @@ public interface TaggingService {
 
 	public void deleteData();
 
-	public void fileInsert(String dropboxUid, String name, String path, Long filesize, Set<String> tags);
+	public void insertOrUpdate(TaggedFile tf);
+	
+	public void insertOrUpdateTaggedFile(String dropboxUid, String name, String path, Long filesize, Set<String> tags);
 
-	public void fileRemove(String string);
-
+	public void fileDelete(String string);
+	
 	public void tagDel(String dropboxId, String tagToDel);
 
 	public void tagAdd(String dropboxId, String tagToAdd);
@@ -27,4 +29,5 @@ public interface TaggingService {
 
 	void downloadTaggedFiles(List<TaggedFile> filesToDownload, OutputStream os);
 
+	
 }

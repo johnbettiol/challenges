@@ -18,6 +18,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.dropbox.core.v2.files.FileMetadata;
@@ -33,6 +34,7 @@ import com.jbettiol.ewddemo.util.CustomException;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = EwdDemoApplication.class)
+@ActiveProfiles("test")
 public class TaggingServiceTest {
 
 	private static final String STR_EXCEPTION_TAGGED_FILES_EXCEED = "Tagged files exceed";
@@ -84,7 +86,7 @@ public class TaggingServiceTest {
 		String filename = "Test File.txt";
 		String filepath = "/path1/path2/";
 		Long filesize = 1024L;
-		taggingService.fileInsert(dropboxId, filename, filepath, filesize, DEF_TAGS_TO_ADD);
+		taggingService.insertOrUpdateTaggedFile(dropboxId, filename, filepath, filesize, DEF_TAGS_TO_ADD);
 		TaggedFile newTaggedFile = taggingService.fileLoadByDropboxId(dropboxId);
 		assertNotNull(newTaggedFile);
 		assertThat(dropboxId).isEqualTo(newTaggedFile.getDropboxId());
@@ -127,7 +129,7 @@ public class TaggingServiceTest {
 		List<TaggedFile> taggedFiles3 = taggingService.tagSearch(TAG_CV);
 		assertThat(taggedFiles3).hasSize(1);
 
-		taggingService.fileRemove(dropboxId);
+		taggingService.fileDelete(dropboxId);
 		List<TaggedFile> taggedFiles4 = taggingService.tagSearch(TAG_CV);
 		assertThat(taggedFiles4).hasSize(0);
 	}
@@ -169,7 +171,7 @@ public class TaggingServiceTest {
 				byte[] fileBytes = makeFileContent(fileCount, DEF_MAX_BYTES_SIZE);
 				ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
 				FileMetadata fmd = dropboxService.uploadFile(filepath + "/" + filename, bais);
-				taggingService.fileInsert(fmd.getId(), filename, filepath, (long) fileBytes.length, tagSet);
+				taggingService.insertOrUpdateTaggedFile(fmd.getId(), filename, filepath, (long) fileBytes.length, tagSet);
 			}
 		}
 

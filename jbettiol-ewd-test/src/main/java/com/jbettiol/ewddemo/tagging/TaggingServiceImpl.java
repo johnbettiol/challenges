@@ -44,7 +44,7 @@ public class TaggingServiceImpl implements TaggingService {
 		if (config.getServerPath() != null) {
 			container = new CoreContainer(config.getServerPath());
 			container.load();
-			server = new EmbeddedSolrServer( container, "collection" );
+			server = new EmbeddedSolrServer(container, "collection");
 		} else {
 			server = new HttpSolrClient.Builder(config.getServerUrl()).build();
 		}
@@ -59,7 +59,12 @@ public class TaggingServiceImpl implements TaggingService {
 	}
 
 	@Override
-	public void fileInsert(String dropboxUid, String filename, String filepath, Long filesize, Set<String> tags) {
+	public void insertOrUpdate(TaggedFile tf) {
+		insertOrUpdateTaggedFile(tf.getDropboxId(), tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tf.getTags());
+	}
+
+	@Override
+	public void insertOrUpdateTaggedFile(String dropboxUid, String filename, String filepath, Long filesize, Set<String> tags) {
 		try {
 			System.out.println("i>" + dropboxUid + " tags: " + String.join(", ", tags));
 			SolrInputDocument newDoc = new SolrInputDocument();
@@ -76,7 +81,7 @@ public class TaggingServiceImpl implements TaggingService {
 	}
 
 	@Override
-	public void fileRemove(String dropboxId) {
+	public void fileDelete(String dropboxId) {
 		try {
 			server.deleteById(dropboxId);
 			server.commit();
@@ -85,13 +90,14 @@ public class TaggingServiceImpl implements TaggingService {
 		}
 	}
 
+
 	@Override
 	public void tagDel(String dropboxId, String tagToDel) {
 		TaggedFile tf = fileLoadByDropboxId(dropboxId);
 		if (tf != null) {
 			Set<String> tagList = tf.getTags();
 			tagList.remove(tagToDel);
-			fileInsert(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
+			insertOrUpdateTaggedFile(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
 		}
 	}
 
@@ -101,7 +107,7 @@ public class TaggingServiceImpl implements TaggingService {
 		if (tf != null) {
 			Set<String> tagList = tf.getTags();
 			tagList.add(tagToAdd);
-			fileInsert(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
+			insertOrUpdateTaggedFile(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
 		}
 	}
 
@@ -149,7 +155,8 @@ public class TaggingServiceImpl implements TaggingService {
 	@Override
 	public TaggedFile fileLoadByDropboxId(String dropboxId) {
 		try {
-			return new TaggedFile(server.getById(dropboxId));
+			SolrDocument loadedFile = server.getById(dropboxId);
+			return loadedFile != null ? new TaggedFile(loadedFile) : null;
 		} catch (Exception e) {
 			throw new CustomException(e.getMessage(), e);
 		}
