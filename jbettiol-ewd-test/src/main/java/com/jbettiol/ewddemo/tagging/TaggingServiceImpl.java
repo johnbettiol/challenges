@@ -25,8 +25,11 @@ import com.jbettiol.ewddemo.util.CustomException;
 @Component
 public class TaggingServiceImpl implements TaggingService {
 
+	private static final String SOLR_PARAM_QUERY = "q";
+	private static final String SOLR_PARAM_START = "start";
+	private static final String SOLR_PARAM_ROWS = "rows";
+	
 	TaggingConfiguration config;
-
 	DropboxService dropbox;
 
 	@Autowired
@@ -60,11 +63,12 @@ public class TaggingServiceImpl implements TaggingService {
 
 	@Override
 	public void insertOrUpdate(TaggedFile tf) {
-		insertOrUpdateTaggedFile(tf.getDropboxId(), tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tf.getTags());
+		insertOrUpdate(tf.getDropboxId(), tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tf.getTags());
 	}
 
 	@Override
-	public void insertOrUpdateTaggedFile(String dropboxUid, String filename, String filepath, Long filesize, Set<String> tags) {
+	public void insertOrUpdate(String dropboxUid, String filename, String filepath, Long filesize,
+			Set<String> tags) {
 		try {
 			System.out.println("i>" + dropboxUid + " tags: " + String.join(", ", tags));
 			SolrInputDocument newDoc = new SolrInputDocument();
@@ -90,14 +94,13 @@ public class TaggingServiceImpl implements TaggingService {
 		}
 	}
 
-
 	@Override
 	public void tagDel(String dropboxId, String tagToDel) {
 		TaggedFile tf = fileLoadByDropboxId(dropboxId);
 		if (tf != null) {
 			Set<String> tagList = tf.getTags();
 			tagList.remove(tagToDel);
-			insertOrUpdateTaggedFile(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
+			insertOrUpdate(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
 		}
 	}
 
@@ -107,7 +110,7 @@ public class TaggingServiceImpl implements TaggingService {
 		if (tf != null) {
 			Set<String> tagList = tf.getTags();
 			tagList.add(tagToAdd);
-			insertOrUpdateTaggedFile(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
+			insertOrUpdate(dropboxId, tf.getFilename(), tf.getFilepath(), tf.getFilesize(), tagList);
 		}
 	}
 
@@ -118,26 +121,30 @@ public class TaggingServiceImpl implements TaggingService {
 	}
 
 	private String generateTagQuery(String query) {
-		return null != query ? "tags" + ":(" + query + ")" : "";
+		return null != query && !"".equals(query) ? "tags" + ":(" + query + ")" : "tags:(*)";
 	}
 
 	@Override
 	public List<TaggedFile> tagSearch(String tagQuery) {
-		return tagSearch(tagQuery, -1, 10000000);
+		return tagSearch(tagQuery, null, null);
 	}
 
 	@Override
-	public List<TaggedFile> tagSearch(String tagQuery, int start, int rows) {
+	public List<TaggedFile> tagSearch(String tagQuery, Integer offset, Integer limit) {
 		List<TaggedFile> taggedFiles = new ArrayList<TaggedFile>();
 		try {
 			ModifiableSolrParams params = new ModifiableSolrParams();
 			String fullQuery = generateTagQuery(tagQuery);
-			params.set("q", fullQuery);
-			if (start >= 0) {
-				params.set("start", start);
+			if (fullQuery == null || "".equals(fullQuery)) {
+				params.set(SOLR_PARAM_QUERY, "*");
+			} else {
+				params.set(SOLR_PARAM_QUERY, fullQuery);
 			}
-			if (rows >= 1) {
-				params.set("rows", rows);
+			if (offset != null) {
+				params.set(SOLR_PARAM_START, offset);
+			}
+			if (limit != null) {
+				params.set(SOLR_PARAM_ROWS, limit);
 			}
 			QueryResponse qResp = server.query(params);
 

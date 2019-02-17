@@ -5,28 +5,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.zip.ZipInputStream;
 
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.dropbox.core.v2.files.FileMetadata;
-import com.dropbox.core.v2.files.FolderMetadata;
 import com.jbettiol.ewddemo.EwdDemoApplication;
-import com.jbettiol.ewddemo.dropbox.DropboxService;
 import com.jbettiol.ewddemo.tagging.TaggedFile;
-import com.jbettiol.ewddemo.tagging.TaggingService;
 import com.jbettiol.ewddemo.util.CustomException;
 
 // Easy example found here:
@@ -35,43 +28,10 @@ import com.jbettiol.ewddemo.util.CustomException;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = EwdDemoApplication.class)
 @ActiveProfiles("test")
-public class TaggingServiceTest {
+@AutoConfigureRestDocs
+public class TaggingServiceTest extends AbstractTaggingTest {
 
-	private static final String STR_EXCEPTION_TAGGED_FILES_EXCEED = "Tagged files exceed";
 
-	private static final String TEST_FOLDER_PATH = "/EWD-TestFolder";
-
-	private static final int DEF_MAX_FILES_PER_TAG = 2;
-	private static final int DEF_MAX_BYTES_SIZE = 256;
-	private static final String TAG_BEACH = "beach";
-	private static final String TAG_MIAMI = "miami";
-	private static final String TAG_WORK = "work";
-	private static final String TAG_CV = "cv";
-	private static final String TAG_APPLICATION = "application";
-	private static final Set<String> DEF_TAGS_TO_ADD = new HashSet<String>() {
-		private static final long serialVersionUID = -321784417496157575L;
-		{
-			add(TAG_BEACH);
-			add(TAG_MIAMI);
-			add(TAG_WORK);
-			add(TAG_CV);
-			add(TAG_APPLICATION);
-		}
-	};
-	private static final Set<String> DEF_TAGS_MINUS_CV = new HashSet<String>() {
-		private static final long serialVersionUID = 2811436662715165644L;
-		{
-			add(TAG_BEACH);
-			add(TAG_MIAMI);
-			add(TAG_WORK);
-			add(TAG_APPLICATION);
-		}
-	};
-
-	@Autowired
-	private TaggingService taggingService;
-	@Autowired
-	private DropboxService dropboxService;
 
 	/**
 	 * This method adds a file to the SOLR index and tests all of the tagging
@@ -86,7 +46,7 @@ public class TaggingServiceTest {
 		String filename = "Test File.txt";
 		String filepath = "/path1/path2/";
 		Long filesize = 1024L;
-		taggingService.insertOrUpdateTaggedFile(dropboxId, filename, filepath, filesize, DEF_TAGS_TO_ADD);
+		taggingService.insertOrUpdate(dropboxId, filename, filepath, filesize, DEF_TAGS_TO_ADD);
 		TaggedFile newTaggedFile = taggingService.fileLoadByDropboxId(dropboxId);
 		assertNotNull(newTaggedFile);
 		assertThat(dropboxId).isEqualTo(newTaggedFile.getDropboxId());
@@ -144,36 +104,9 @@ public class TaggingServiceTest {
 	public void taggedFilesPaginationAndDownload() throws Exception {
 		taggingService.deleteData();
 
-		try {
-			FolderMetadata fldMd = dropboxService.getFolderDetails(TEST_FOLDER_PATH);
-			if (fldMd.getId() != null) {
-				dropboxService.deleteFolder(TEST_FOLDER_PATH);
-			}
-		} catch (Exception e) {
+		clearDropboxTestFolder();
 
-		}
-
-		// Add 100 files to index for each tags, removing a tag until none are left
-		List<String> tagsToAddList = new ArrayList<String>();
-		tagsToAddList.addAll(DEF_TAGS_TO_ADD);
-		int fileCount = 0;
-		for (int i = 0; i < tagsToAddList.size(); i++) {
-			Set<String> tagSet = new HashSet<String>();
-			for (String tag : DEF_TAGS_TO_ADD) {
-				if (tagSet.size() <= i) {
-					tagSet.add(tag);
-				}
-			}
-			for (int j = 0; j < DEF_MAX_FILES_PER_TAG; j++) {
-				fileCount++;
-				String filename = "TestFile-" + fileCount + ".txt";
-				String filepath = TEST_FOLDER_PATH;
-				byte[] fileBytes = makeFileContent(fileCount, DEF_MAX_BYTES_SIZE);
-				ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
-				FileMetadata fmd = dropboxService.uploadFile(filepath + "/" + filename, bais);
-				taggingService.insertOrUpdateTaggedFile(fmd.getId(), filename, filepath, (long) fileBytes.length, tagSet);
-			}
-		}
+		populateTags();
 
 		// Scenarios BEACH AND APPLICATION = 10
 		CountExpectedTagQueryRows(TAG_BEACH + " AND " + TAG_APPLICATION, DEF_MAX_FILES_PER_TAG);
@@ -200,16 +133,6 @@ public class TaggingServiceTest {
 		fos.close();
 	}
 
-	private byte[] makeFileContent(int fileCount, int maxFileSize) {
-		StringBuffer sb = new StringBuffer();
-		int rowCount = 1;
-		while (sb.length() < maxFileSize) {
-			sb.append(rowCount + ": Test Upload File # " + fileCount);
-			rowCount++;
-
-		}
-		return sb.toString().getBytes();
-	}
 
 	private void CountExpectedTagQueryRows(String tagQuery, Integer expectedCount) {
 		List<TaggedFile> searchResults = taggingService.tagSearch(tagQuery);

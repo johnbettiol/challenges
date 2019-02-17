@@ -4,8 +4,8 @@ solr:
   serverPath: ./testdata/solr
   serverUrl: http://localhost:8983/solr/
   homePath: ./testdata/solr/
-dropbox:
-  accessToken: 6PIU0x4eVr8AAAAAAAABD2DQxxtrY8A10xTty2f3WuziKUm9nXlluxHYsZmOd2Y7
+#dropbox:
+#  accessToken: 6PIU0x4eVr8AAAAAAAABD2DQxxtrY8A10xTty2f3WuziKUm9nXlluxHYsZmOd2Y7
   ewdTestFolder: /jbettiol-ewd-test
 tagging:
   maxDownloadSize: 1K

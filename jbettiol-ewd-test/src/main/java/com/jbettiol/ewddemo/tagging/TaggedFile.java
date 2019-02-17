@@ -16,7 +16,7 @@ public class TaggedFile implements Cloneable {
 	public static final String KEY_TAGS = "tags";
 
 	private String dropboxId, filename, filepath;
-	private long filesize;
+	private Long filesize;
 	private Set<String> tags;
 
 	public TaggedFile(String dropboxId, String filename, String filepath, long filesize, Set<String> tags) {
@@ -27,6 +27,7 @@ public class TaggedFile implements Cloneable {
 		this.tags = tags;
 	}
 
+	@SuppressWarnings("unchecked")
 	public TaggedFile(SolrDocument newDoc) {
 		this.dropboxId = (String) newDoc.getFieldValue(KEY_DROPBOX_ID);
 		this.filename = ((ArrayList<String>) newDoc.getFieldValue(KEY_FILENAME)).get(0);
@@ -55,12 +56,10 @@ public class TaggedFile implements Cloneable {
 		return filesize;
 	}
 
-	@SuppressWarnings("unchecked")
 	public Set<String> getTags() {
 		return tags;
 	}
 
-	@SuppressWarnings("unchecked")
 	public String toString() {
 		return dropboxId + ": " + filename + ", " + filepath + ", (" + filesize + ", (" + tags + ")";
 	}

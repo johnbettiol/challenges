@@ -13,9 +13,9 @@ public interface TaggingService {
 
 	public void insertOrUpdate(TaggedFile tf);
 	
-	public void insertOrUpdateTaggedFile(String dropboxUid, String name, String path, Long filesize, Set<String> tags);
+	public void insertOrUpdate(String dropboxUid, String name, String path, Long filesize, Set<String> tags);
 
-	public void fileDelete(String string);
+	public void fileDelete(String dropboxId);
 	
 	public void tagDel(String dropboxId, String tagToDel);
 
@@ -25,7 +25,7 @@ public interface TaggingService {
 
 	List<TaggedFile> tagSearch(String tagQuery);
 
-	List<TaggedFile> tagSearch(String tagQuery, int start, int rows);
+	List<TaggedFile> tagSearch(String tagQuery, Integer start, Integer rows);
 
 	void downloadTaggedFiles(List<TaggedFile> filesToDownload, OutputStream os);
 
