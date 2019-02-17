@@ -54,6 +54,7 @@ dependencies {
     compile('org.apache.commons:commons-io:1.3.2')
 	compile('io.dropwizard.metrics:metrics-core:3.2.6')
 	compile('log4j:log4j:1.2.17')
+	compile('javax.xml.bind:jaxb-api:2.3.0')
 
 	testCompile('org.springframework.boot:spring-boot-starter-test') {
 		exclude module: "logback-classic"

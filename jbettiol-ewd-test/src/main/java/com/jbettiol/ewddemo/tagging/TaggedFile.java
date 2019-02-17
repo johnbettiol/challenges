@@ -1,12 +1,12 @@
 package com.jbettiol.ewddemo.tagging;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.solr.common.SolrDocument;
-import org.assertj.core.util.Arrays;
 
 public class TaggedFile {
 	public static final String KEY_DROPBOX_ID = "id";
@@ -25,24 +25,29 @@ public class TaggedFile {
 	public String getDropboxId() {
 		return (String) taggedFileDoc.getFieldValue(KEY_DROPBOX_ID);
 	}
-
+	@SuppressWarnings("unchecked")
 	public String getFilename() {
 		return ((ArrayList<String>) taggedFileDoc.getFieldValue(KEY_FILENAME)).get(0);
 	}
 
+	@SuppressWarnings("unchecked")
 	public String getFilepath() {
 		return ((ArrayList<String>) taggedFileDoc.getFieldValue(KEY_FILEPATH)).get(0);
 	}
 
+	@SuppressWarnings("unchecked")
 	public Long getFilesize() {
 		return ((ArrayList<Long>) taggedFileDoc.getFieldValue(KEY_FILESIZE)).get(0);
 	}
 
+	@SuppressWarnings("unchecked")
 	public Set<String> getTags() {
-		return new HashSet((List<String>) (List<?>) Arrays
+		return new HashSet<String>((List<String>) (List<?>) Arrays
 				.asList(((ArrayList<String>) taggedFileDoc.getFieldValue(KEY_TAGS)).get(0).split(" ")));
 	}
 
+
+	@SuppressWarnings("unchecked")
 	public String toString() {
 		return taggedFileDoc.getFieldValue(KEY_DROPBOX_ID) + ": "
 				+ ((ArrayList<String>) taggedFileDoc.getFieldValue(KEY_FILENAME)).get(0) + ", "

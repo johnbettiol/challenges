@@ -1,10 +1,15 @@
 package com.jbettiol.ewddemo.dropbox;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
+
 import com.dropbox.core.v2.files.CreateFolderResult;
 import com.dropbox.core.v2.files.FileMetadata;
 import com.dropbox.core.v2.files.FolderMetadata;
 import com.dropbox.core.v2.files.ListFolderResult;
-import java.io.InputStream;
+import com.jbettiol.ewddemo.tagging.TaggedFile;
 
 public interface DropboxService {
 
@@ -25,4 +30,6 @@ public interface DropboxService {
     void deleteFile(String filePath);
 
     void deleteFolder(String folderPath);
+
+	void downloadTagFilesToZipStream(List<TaggedFile> filesToDownload, OutputStream out) throws IOException;
 }

@@ -8,93 +8,120 @@ import com.dropbox.core.v2.files.ListFolderBuilder;
 import com.dropbox.core.v2.files.ListFolderResult;
 import com.dropbox.core.v2.files.Metadata;
 import com.jbettiol.ewddemo.dropbox.exception.DropboxException;
+import com.jbettiol.ewddemo.tagging.TaggedFile;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 
 @Service
 class DropboxServiceImpl implements DropboxService {
 
-    private final DbxClientV2 client;
+	private final DbxClientV2 client;
 
-    public DropboxServiceImpl(DbxClientV2 client) {
-        this.client = client;
-    }
+	public DropboxServiceImpl(DbxClientV2 client) {
+		this.client = client;
+	}
 
-    @Override
-    public InputStream downloadFile(String filePath) {
-        return handleDropboxAction(() -> client.files().download(filePath).getInputStream(),
-                String.format("Error downloading file: %s", filePath));
-    }
+	@Override
+	public InputStream downloadFile(String filePath) {
+		return handleDropboxAction(() -> client.files().download(filePath).getInputStream(),
+				String.format("Error downloading file: %s", filePath));
+	}
 
-    @Override
-    public FileMetadata uploadFile(String filePath, InputStream fileStream) {
-        return handleDropboxAction(() -> client.files().uploadBuilder(filePath).uploadAndFinish(fileStream),
-                String.format("Error uploading file: %s", filePath));
-    }
+	@Override
+	public FileMetadata uploadFile(String filePath, InputStream fileStream) {
+		System.out.println("Uploade file: " + filePath);
+		return handleDropboxAction(() -> client.files().uploadBuilder(filePath).uploadAndFinish(fileStream),
+				String.format("Error uploading file: %s", filePath));
+	}
 
-    @Override
-    public CreateFolderResult createFolder(String folderPath) {
-        return handleDropboxAction(() -> client.files().createFolderV2(folderPath), "Error creating folder");
-    }
+	@Override
+	public CreateFolderResult createFolder(String folderPath) {
+		return handleDropboxAction(() -> client.files().createFolderV2(folderPath), "Error creating folder");
+	}
 
-    @Override
-    public FolderMetadata getFolderDetails(String folderPath) {
-        return getMetadata(folderPath, FolderMetadata.class, String.format("Error getting folder details: %s", folderPath));
-    }
+	@Override
+	public FolderMetadata getFolderDetails(String folderPath) {
+		return getMetadata(folderPath, FolderMetadata.class,
+				String.format("Error getting folder details: %s", folderPath));
+	}
 
-    @Override
-    public FileMetadata getFileDetails(String filePath) {
-        return getMetadata(filePath, FileMetadata.class, String.format("Error getting file details: %s", filePath));
-    }
+	@Override
+	public FileMetadata getFileDetails(String filePath) {
+		return getMetadata(filePath, FileMetadata.class, String.format("Error getting file details: %s", filePath));
+	}
 
-    @Override
-    public ListFolderResult listFolder(String folderPath, boolean recursiveListing, long limit) {
-        ListFolderBuilder listFolderBuilder = client.files().listFolderBuilder(folderPath);
-        listFolderBuilder.withRecursive(recursiveListing);
-        listFolderBuilder.withLimit(limit);
+	@Override
+	public ListFolderResult listFolder(String folderPath, boolean recursiveListing, long limit) {
+		ListFolderBuilder listFolderBuilder = client.files().listFolderBuilder(folderPath);
+		listFolderBuilder.withRecursive(recursiveListing);
+		listFolderBuilder.withLimit(limit);
 
-        return handleDropboxAction(listFolderBuilder::start, String.format("Error listing folder: %s", folderPath));
-    }
+		return handleDropboxAction(listFolderBuilder::start, String.format("Error listing folder: %s", folderPath));
+	}
 
-    @Override
-    public ListFolderResult listFolderContinue(String cursor) {
-        return handleDropboxAction(() -> client.files().listFolderContinue(cursor), "Error listing folder");
-    }
+	@Override
+	public ListFolderResult listFolderContinue(String cursor) {
+		return handleDropboxAction(() -> client.files().listFolderContinue(cursor), "Error listing folder");
+	}
 
-    @Override
-    public void deleteFile(String filePath) {
-        handleDropboxAction(() -> client.files().deleteV2(filePath), String.format("Error deleting file: %s", filePath));
-    }
+	@Override
+	public void deleteFile(String filePath) {
+		handleDropboxAction(() -> client.files().deleteV2(filePath),
+				String.format("Error deleting file: %s", filePath));
+	}
 
-    @Override
-    public void deleteFolder(String folderPath) {
-        handleDropboxAction(() -> client.files().deleteV2(folderPath), String.format("Error deleting folder: %s", folderPath));
-    }
+	@Override
+	public void deleteFolder(String folderPath) {
+		handleDropboxAction(() -> client.files().deleteV2(folderPath),
+				String.format("Error deleting folder: %s", folderPath));
+	}
 
-    private <T> T handleDropboxAction(DropboxActionResolver<T> action, String exceptionMessage) {
-        try {
-            return action.perform();
-        } catch (Exception e) {
-            String messageWithCause = String.format("%s with cause: %s", exceptionMessage, e.getMessage());
-            throw new DropboxException(messageWithCause, e);
-        }
-    }
+	@Override
+	public void downloadTagFilesToZipStream(List<TaggedFile> filesToDownload, OutputStream out) throws IOException {
+		ZipOutputStream zipOutputStream = new ZipOutputStream(out);
 
-    @SuppressWarnings("unchecked")
-    private <T> T getMetadata(String path, Class<T> type, String message) {
-        Metadata metadata = handleDropboxAction(() -> client.files().getMetadata(path),
-                String.format("Error accessing details of: %s", path));
+		for (TaggedFile taggedFile : filesToDownload) {
+			System.out.println("adding to stream: " + taggedFile.getFilepath() + "/" + taggedFile.getFilename());
+			zipOutputStream.putNextEntry(new ZipEntry(taggedFile.getFilename()));
+			InputStream tfIs = downloadFile(taggedFile.getFilepath() + "/" + taggedFile.getFilename());
+			IOUtils.copy(tfIs, zipOutputStream);
+			tfIs.close();
+			zipOutputStream.closeEntry();
+		}
+		zipOutputStream.close();
+	}
 
-        checkIfMetadataIsInstanceOfGivenType(metadata, type, message);
-        return (T) metadata;
-    }
+	private <T> T handleDropboxAction(DropboxActionResolver<T> action, String exceptionMessage) {
+		try {
+			return action.perform();
+		} catch (Exception e) {
+			String messageWithCause = String.format("%s with cause: %s", exceptionMessage, e.getMessage());
+			throw new DropboxException(messageWithCause, e);
+		}
+	}
 
-    private <T> void checkIfMetadataIsInstanceOfGivenType(Metadata metadata, Class<T> validType, String exceptionMessage) {
-        boolean isValidType = validType.isInstance(metadata);
-        if (!isValidType) {
-            throw new DropboxException(exceptionMessage);
-        }
-    }
+	@SuppressWarnings("unchecked")
+	private <T> T getMetadata(String path, Class<T> type, String message) {
+		Metadata metadata = handleDropboxAction(() -> client.files().getMetadata(path),
+				String.format("Error accessing details of: %s", path));
+
+		checkIfMetadataIsInstanceOfGivenType(metadata, type, message);
+		return (T) metadata;
+	}
+
+	private <T> void checkIfMetadataIsInstanceOfGivenType(Metadata metadata, Class<T> validType,
+			String exceptionMessage) {
+		boolean isValidType = validType.isInstance(metadata);
+		if (!isValidType) {
+			throw new DropboxException(exceptionMessage);
+		}
+	}
 }

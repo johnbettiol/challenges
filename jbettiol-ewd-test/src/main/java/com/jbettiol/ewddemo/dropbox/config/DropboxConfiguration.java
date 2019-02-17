@@ -1,12 +1,14 @@
 package com.jbettiol.ewddemo.dropbox.config;
 
-import com.dropbox.core.DbxRequestConfig;
-import com.dropbox.core.v2.DbxClientV2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
-@Configuration
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.v2.DbxClientV2;
+
+// @Configuration
+@Component
 class DropboxConfiguration {
 
     @Value("${dropbox.accessToken}")

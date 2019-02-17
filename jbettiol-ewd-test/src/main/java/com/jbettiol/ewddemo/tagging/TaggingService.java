@@ -1,5 +1,6 @@
 package com.jbettiol.ewddemo.tagging;
 
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 
@@ -23,5 +24,7 @@ public interface TaggingService {
 	List<TaggedFile> tagSearch(String tagQuery);
 
 	List<TaggedFile> tagSearch(String tagQuery, int start, int rows);
+
+	void downloadTaggedFiles(List<TaggedFile> filesToDownload, OutputStream os);
 
 }

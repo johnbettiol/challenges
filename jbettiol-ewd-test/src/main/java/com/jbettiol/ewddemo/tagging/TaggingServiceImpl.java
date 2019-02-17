@@ -1,41 +1,53 @@
 package com.jbettiol.ewddemo.tagging;
 
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.core.CoreContainer;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.jbettiol.ewddemo.dropbox.DropboxService;
+import com.jbettiol.ewddemo.tagging.config.TaggingConfiguration;
 import com.jbettiol.ewddemo.util.CustomException;
 
 @Component
 public class TaggingServiceImpl implements TaggingService {
 
-	@Value("${solr.homePath}")
-	String homePath;
+	TaggingConfiguration config;
 
-	EmbeddedSolrServer server;
-	CoreContainer container;
+	DropboxService dropbox;
 
-	public TaggingServiceImpl() {
+	@Autowired
+	public TaggingServiceImpl(TaggingConfiguration config, DropboxService dropbox) {
+
+		this.config = config;
+		this.dropbox = dropbox;
 		init();
 	}
 
+	SolrClient server;
+	CoreContainer container;
+
 	private void init() {
-		container = new CoreContainer("testdata/solr");
-		container.load();
-		server = new EmbeddedSolrServer(container, "collection");
+		if (config.getServerPath() != null) {
+			container = new CoreContainer(config.getServerPath());
+			container.load();
+			server = new EmbeddedSolrServer( container, "collection" );
+		} else {
+			server = new HttpSolrClient.Builder(config.getServerUrl()).build();
+		}
 	}
 
 	public void deleteData() {
@@ -49,6 +61,7 @@ public class TaggingServiceImpl implements TaggingService {
 	@Override
 	public void fileInsert(String dropboxUid, String filename, String filepath, Long filesize, Set<String> tags) {
 		try {
+			System.out.println("i>" + dropboxUid + " tags: " + String.join(", ", tags));
 			SolrInputDocument newDoc = new SolrInputDocument();
 			newDoc.addField(TaggedFile.KEY_DROPBOX_ID, dropboxUid);
 			newDoc.addField(TaggedFile.KEY_FILENAME, filename);
@@ -56,7 +69,7 @@ public class TaggingServiceImpl implements TaggingService {
 			newDoc.addField(TaggedFile.KEY_FILESIZE, filesize);
 			newDoc.addField(TaggedFile.KEY_TAGS, String.join(" ", tags));
 			server.add(newDoc);
-			UpdateResponse ur = server.commit();
+			server.commit();
 		} catch (Exception e) {
 			throw new CustomException(e.getMessage(), e);
 		}
@@ -139,6 +152,23 @@ public class TaggingServiceImpl implements TaggingService {
 			return new TaggedFile(server.getById(dropboxId));
 		} catch (Exception e) {
 			throw new CustomException(e.getMessage(), e);
+		}
+	}
+
+	@Override
+	public void downloadTaggedFiles(List<TaggedFile> filesToDownload, OutputStream os) {
+		long filesizeCount = 0L;
+		for (TaggedFile taggedFile : filesToDownload) {
+			filesizeCount += taggedFile.getFilesize();
+			if (filesizeCount > config.getMaxDownloadLimit()) {
+				throw new CustomException(
+						"Tagged files exceed maximum permitted (" + config.getMaxDownloadSize() + ")");
+			}
+		}
+		try {
+			dropbox.downloadTagFilesToZipStream(filesToDownload, os);
+		} catch (Exception e) {
+			throw new CustomException("Unable to download tagged files: " + e.getMessage(), e);
 		}
 	}
 

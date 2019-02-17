@@ -5,11 +5,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.After;
@@ -19,9 +20,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.dropbox.core.v2.files.FileMetadata;
+import com.dropbox.core.v2.files.FolderMetadata;
 import com.jbettiol.ewddemo.EwdDemoApplication;
+import com.jbettiol.ewddemo.dropbox.DropboxService;
 import com.jbettiol.ewddemo.tagging.TaggedFile;
 import com.jbettiol.ewddemo.tagging.TaggingService;
+import com.jbettiol.ewddemo.util.CustomException;
 
 // Easy example found here:
 // https://www.tutorialspoint.com/spring_boot/spring_boot_rest_controller_unit_test.htm
@@ -30,13 +35,19 @@ import com.jbettiol.ewddemo.tagging.TaggingService;
 @SpringBootTest(classes = EwdDemoApplication.class)
 public class TaggingServiceTest {
 
-	private static final int DEF_MAX_FILES_PER_TAG = 10;
+	private static final String STR_EXCEPTION_TAGGED_FILES_EXCEED = "Tagged files exceed";
+
+	private static final String TEST_FOLDER_PATH = "/EWD-TestFolder";
+
+	private static final int DEF_MAX_FILES_PER_TAG = 2;
+	private static final int DEF_MAX_BYTES_SIZE = 256;
 	private static final String TAG_BEACH = "beach";
 	private static final String TAG_MIAMI = "miami";
 	private static final String TAG_WORK = "work";
 	private static final String TAG_CV = "cv";
 	private static final String TAG_APPLICATION = "application";
 	private static final Set<String> DEF_TAGS_TO_ADD = new HashSet<String>() {
+		private static final long serialVersionUID = -321784417496157575L;
 		{
 			add(TAG_BEACH);
 			add(TAG_MIAMI);
@@ -46,6 +57,7 @@ public class TaggingServiceTest {
 		}
 	};
 	private static final Set<String> DEF_TAGS_MINUS_CV = new HashSet<String>() {
+		private static final long serialVersionUID = 2811436662715165644L;
 		{
 			add(TAG_BEACH);
 			add(TAG_MIAMI);
@@ -56,6 +68,8 @@ public class TaggingServiceTest {
 
 	@Autowired
 	private TaggingService taggingService;
+	@Autowired
+	private DropboxService dropboxService;
 
 	/**
 	 * This method adds a file to the SOLR index and tests all of the tagging
@@ -127,6 +141,16 @@ public class TaggingServiceTest {
 	@Test
 	public void taggedFilesPaginationAndDownload() throws Exception {
 		taggingService.deleteData();
+
+		try {
+			FolderMetadata fldMd = dropboxService.getFolderDetails(TEST_FOLDER_PATH);
+			if (fldMd.getId() != null) {
+				dropboxService.deleteFolder(TEST_FOLDER_PATH);
+			}
+		} catch (Exception e) {
+
+		}
+
 		// Add 100 files to index for each tags, removing a tag until none are left
 		List<String> tagsToAddList = new ArrayList<String>();
 		tagsToAddList.addAll(DEF_TAGS_TO_ADD);
@@ -140,20 +164,49 @@ public class TaggingServiceTest {
 			}
 			for (int j = 0; j < DEF_MAX_FILES_PER_TAG; j++) {
 				fileCount++;
-				String dropboxId = "dbid-" + fileCount;
 				String filename = "TestFile-" + fileCount + ".txt";
-				String filepath = "/path" + i + "/path" + j + "/";
-				Long filesize = 1024L;
-
-				taggingService.fileInsert(dropboxId, filename, filepath, filesize, tagSet);
+				String filepath = TEST_FOLDER_PATH;
+				byte[] fileBytes = makeFileContent(fileCount, DEF_MAX_BYTES_SIZE);
+				ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
+				FileMetadata fmd = dropboxService.uploadFile(filepath + "/" + filename, bais);
+				taggingService.fileInsert(fmd.getId(), filename, filepath, (long) fileBytes.length, tagSet);
 			}
 		}
 
 		// Scenarios BEACH AND APPLICATION = 10
 		CountExpectedTagQueryRows(TAG_BEACH + " AND " + TAG_APPLICATION, DEF_MAX_FILES_PER_TAG);
 
-		// Scenarios BEACH OR APPLICATION = 50
-		CountExpectedTagQueryRows(TAG_BEACH + " OR " + TAG_APPLICATION, DEF_MAX_FILES_PER_TAG * 5);
+		// Scenarios BEACH OR APPLICATION = 30
+		CountExpectedTagQueryRows(TAG_BEACH + " OR " + TAG_APPLICATION, DEF_MAX_FILES_PER_TAG * 3);
+
+		// Scenarios MIAMI OR NOT APPLICATION = 50
+		CountExpectedTagQueryRows(TAG_MIAMI + " OR NOT" + TAG_APPLICATION, DEF_MAX_FILES_PER_TAG * 5);
+		try {
+			File tmpZip = new File("./testOutput.zip");
+			FileOutputStream fos = new FileOutputStream(tmpZip);
+			taggingService.downloadTaggedFiles(taggingService.tagSearch(TAG_MIAMI), fos);
+			fos.close();
+		} catch (CustomException e) {
+			// We want an exception thrown here
+			assertTrue(e.getMessage().indexOf(STR_EXCEPTION_TAGGED_FILES_EXCEED) >= 0);
+		}
+
+		// It should work fine for just one file
+		File tmpZip = new File("./testOutput.zip");
+		FileOutputStream fos = new FileOutputStream(tmpZip);
+		taggingService.downloadTaggedFiles(taggingService.tagSearch(TAG_BEACH + " AND " + TAG_APPLICATION), fos);
+		fos.close();
+	}
+
+	private byte[] makeFileContent(int fileCount, int maxFileSize) {
+		StringBuffer sb = new StringBuffer();
+		int rowCount = 1;
+		while (sb.length() < maxFileSize) {
+			sb.append(rowCount + ": Test Upload File # " + fileCount);
+			rowCount++;
+
+		}
+		return sb.toString().getBytes();
 	}
 
 	private void CountExpectedTagQueryRows(String tagQuery, Integer expectedCount) {
