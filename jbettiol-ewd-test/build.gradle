@@ -36,9 +36,19 @@ repositories {
 	}
 }
 
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        }
+    }
+}
+
 // configurations { all*.exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j' }
 configurations { all*.exclude module : 'spring-boot-starter-logging' }
 dependencies {
+	compile('javax.servlet:servlet-api:2.5')
+
 	compile('org.restlet.jee:org.restlet.ext.servlet:2.3.0')
 	compile('org.restlet.jee:org.restlet:2.3.0')
 	compile('junit:junit:4.12')
@@ -50,7 +60,9 @@ dependencies {
     }
 	compile('org.springframework.boot:spring-boot-starter-web')
     compile('com.dropbox.core:dropbox-core-sdk:3.0.8')
-	compile('org.apache.solr:solr-core:7.4.0')
+	compile('org.apache.solr:solr-core:7.4.0') {
+    	 exclude module: "javax.servlet-api"
+    }
     compile('org.apache.commons:commons-io:1.3.2')
 	compile('io.dropwizard.metrics:metrics-core:3.2.6')
 	compile('log4j:log4j:1.2.17')
@@ -60,9 +72,12 @@ dependencies {
 	testCompile('org.springframework.boot:spring-boot-starter-test') {
 		exclude module: "logback-classic"
 	 }
-	testCompile('javax.servlet:servlet-api:2.5')
 	testCompile('commons-logging:commons-logging:1.2')
 	testCompile('org.hamcrest:hamcrest-all:1.3')
-	testCompile('org.springframework.restdocs:spring-restdocs-mockmvc:2.0.0.RELEASE')
+
+    testCompile("org.springframework.boot:spring-boot-starter-test")
+	
+	// testCompile('com.jayway.restassured:spring-mock-mvc:2.2.0')
+	// testCompile('org.springframework.restdocs:spring-restdocs-mockmvc:2.0.0.RELEASE')
     
 }

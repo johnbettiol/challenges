@@ -47,7 +47,7 @@ import com.jbettiol.ewddemo.util.CustomException;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = EwdDemoApplication.class)
 @ActiveProfiles("test")
-@AutoConfigureRestDocs
+// @AutoConfigureRestDocs
 public class TaggingApiTest extends AbstractTaggingTest {
 
 	@Override
@@ -217,8 +217,7 @@ public class TaggingApiTest extends AbstractTaggingTest {
 
 	public static final <T> List<T> getList(final Class<T[]> clazz, final String json) {
 		final T[] jsonToObject = new Gson().fromJson(json, clazz);
-
-		return new LinkedList(Arrays.asList(jsonToObject));
+		return new LinkedList<T>(Arrays.asList(jsonToObject));
 	}
 
 	@Test

@@ -28,7 +28,7 @@ import com.jbettiol.ewddemo.util.CustomException;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = EwdDemoApplication.class)
 @ActiveProfiles("test")
-@AutoConfigureRestDocs
+// @AutoConfigureRestDocs
 public class TaggingServiceTest extends AbstractTaggingTest {
 
 
