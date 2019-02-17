@@ -18,6 +18,14 @@ Tags are lowercase, alphanumeric strings that can contain useful information abo
 * A docker image should be built on app build phases, and we should be able to simply run a docker container from your image to test the app (instructions on how to run your app would be nice). (A docker-compose file which spawns everything up&ready to test would be extra nice)
 * The API should follow RESTful API conventions & best practices.
 
+## How to run
+
+1) It only works in Eclipse!!  For some reason I have a ridiculous dependenct issue (only recently) via command line
+2) The two test cases of relevance are TaggingApiTest and TaggingServiceTest
+3) Be sure to update your application-test.properties file with a working token
+
+Note: I am yet to test it with a remote server, just didn't get around to it!
+
 ## John's Preface / Excuses!!
 * I haven't programmed any "real" work in Java since 2011.  Since that time I have done an Android app but it isn't anything to be proud of!  Hopefully you'll all forgive me for any screw-ups in the code!
 * After building my own dropbox proxy (using RestTemplate) and associated unit tests (using MockMvc) I decided it was dumb and instead borrowed the library written by MajewskiKrzysztof, found here: https://github.com/MajewskiKrzysztof/spring-boot-dropbox  **Note:** Source code can be provide if necessary
